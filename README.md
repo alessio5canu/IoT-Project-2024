@@ -1,4 +1,4 @@
-# IoT-Project-2024
+# IoT-Project-2024 questa + una prova
 
 <p align="center">
   <img src="https://fede3751.github.io/IoT-lectures-2024/imgs/project/project_splashart_2024.png">
