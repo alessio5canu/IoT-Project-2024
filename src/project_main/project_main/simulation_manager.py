@@ -23,10 +23,13 @@ class SimulationManager(Node):
 
         super().__init__('simulation_manager')
 
-
         self.sensor_positions = {}
         self.balloon_positions = {}
-
+        #le nostre variabili
+        self.packet_delays_list = []
+        self.packet_distances_list = []
+        self.total_packets_sent = 0
+        self.total_packets_received = 0
 
         for i in range(NUMBER_OF_SENSORS):
 
@@ -37,7 +40,6 @@ class SimulationManager(Node):
                 10
                 #self.store_sensor_position
             )
-
             self.create_subscription(
                 String,
                 f'Sensor_{i}/tx_data',
@@ -45,7 +47,6 @@ class SimulationManager(Node):
                 #self.forward_data,
                 10
             )
-
         self.balloons_rx = {}
 
         for i in range(NUMBER_OF_BALLOONS):
@@ -76,26 +77,44 @@ class SimulationManager(Node):
 
 
     def forward_data(self, sensor_id, msg : String):
+        #ogni volta che il sensore un pacchetto
+        self.total_packets_sent += 1
 
         for i in range(NUMBER_OF_BALLOONS):
             if sensor_id in self.sensor_positions and i in self.balloon_positions:
                 
                 if math_utils.point_distance(self.sensor_positions[sensor_id], self.balloon_positions[i]) < SENSORS_RANGE:
                     self.balloons_rx[i].publish(msg)
-        
+                    #ogni volta che un baloon invia un pacchetto
+                    self.total_packets_received += 1
+    
+    def calculate_avg_results(self):
+        # packets delay average calculation
+        #packets_delay_avg = 
+        # packets loss average calculation
+        packets_loss_avg = (self.total_packets_sent - self.total_packets_received) / self.total_packets_sent if (self.total_packets_sent > 0) else 0
+        # packets distance average calculation
+        packets_distance_avg = sum(self.packet_distances_list) / len(self.packet_distances_list) if self.packet_distances_list else 0
 
-
-
+        print(f"Average Packet Loss: {packets_loss_avg:.2f}%")
+        print(f"Average Packet Distance: {packets_distance_avg:.2f}%")
 
 def main():
 
-    rclpy.init()
+    rclpy.init() # init ROS 2 system
 
     simulationManager= SimulationManager()
     executor = MultiThreadedExecutor()
+
+    # SimulationManager instance is added to the executor. 
+    # It let the executor handling parallel simulationManager's callbacks.
     executor.add_node(simulationManager)
 
+    # in order to execute all nodes' callbacks an infinite loop is started 
+    # 'till the program is terminated.
     executor.spin()
+
+    simulationManager.calculate_avg_results() # print roba
 
     executor.shutdown()
     simulationManager.destroy_node()
