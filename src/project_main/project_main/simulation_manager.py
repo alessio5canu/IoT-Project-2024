@@ -87,6 +87,8 @@ class SimulationManager(Node):
                     self.balloons_rx[i].publish(msg)
                     #ogni volta che un baloon invia un pacchetto
                     self.total_packets_received += 1
+                    print("ciao2") 
+                    self.get_logger().info("ciao2") 
     
     def calculate_avg_results(self):
         # packets delay average calculation
@@ -109,6 +111,8 @@ def main():
     # SimulationManager instance is added to the executor. 
     # It let the executor handling parallel simulationManager's callbacks.
     executor.add_node(simulationManager)
+    print("ciao") 
+    self.get_logger().info("ciao") 
 
     # in order to execute all nodes' callbacks an infinite loop is started 
     # 'till the program is terminated.
