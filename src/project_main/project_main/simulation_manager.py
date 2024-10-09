@@ -5,7 +5,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 
-from std_msgs.msg import String
+from project_interfaces.msg import SensorInfo
 from geometry_msgs.msg import Point
 from nav_msgs.msg import Odometry
 
@@ -41,10 +41,9 @@ class SimulationManager(Node):
                 #self.store_sensor_position
             )
             self.create_subscription(
-                String,
+                SensorInfo,
                 f'Sensor_{i}/tx_data',
-                lambda string_msg, sensor_id = i: self.forward_data(sensor_id, string_msg),
-                #self.forward_data,
+                lambda msg, sensor_id=i: self.forward_data(sensor_id, msg),
                 10
             )
         self.balloons_rx = {}
@@ -61,7 +60,7 @@ class SimulationManager(Node):
             )
 
             self.balloons_rx[i] = self.create_publisher(
-                String,
+                SensorInfo,
                 f'Balloon_{i}/rx_data',
                 10
             )
@@ -76,7 +75,7 @@ class SimulationManager(Node):
         self.balloon_positions[balloon_id] = position.pose.pose.position
 
 
-    def forward_data(self, sensor_id, msg : String):
+    def forward_data(self, sensor_id, msg : SensorInfo):
         #ogni volta che il sensore un pacchetto
         self.total_packets_sent += 1
 
