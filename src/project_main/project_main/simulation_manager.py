@@ -21,15 +21,19 @@ class SimulationManager(Node):
 
     def __init__(self):
 
-        super().__init__('simulation_manager')
+        super().__init__('simulationManager')
 
         self.sensor_positions = {}
         self.balloon_positions = {}
         #le nostre variabili
-        self.packet_delays_list = []
-        self.packet_distances_list = []
+        self.base_station_position = None
+        self.packet_distances = []
         self.total_packets_sent = 0
         self.total_packets_received = 0
+        self.total_bytes_transmitted = 0 
+
+        self.start_time = time.time()  
+
 
         for i in range(NUMBER_OF_SENSORS):
 
@@ -65,6 +69,14 @@ class SimulationManager(Node):
                 10
             )
 
+         # base station position
+        self.create_subscription(
+            Odometry,
+            '/BaseStation/odometry',
+            self.store_base_station_position,
+            10
+        )
+
     def store_sensor_position(self, sensor_id, position : Odometry):
 
         self.sensor_positions[sensor_id] = position.pose.pose.position
@@ -74,31 +86,56 @@ class SimulationManager(Node):
 
         self.balloon_positions[balloon_id] = position.pose.pose.position
 
+    def store_base_station_position(self, position: Odometry):
+
+        self.base_station_position = position.pose.pose.position
 
     def forward_data(self, sensor_id, msg : SensorInfo):
-        #ogni volta che il sensore un pacchetto
+       
         self.total_packets_sent += 1
 
-        for i in range(NUMBER_OF_BALLOONS):
-            if sensor_id in self.sensor_positions and i in self.balloon_positions:
-                
-                if math_utils.point_distance(self.sensor_positions[sensor_id], self.balloon_positions[i]) < SENSORS_RANGE:
-                    self.balloons_rx[i].publish(msg)
-                    #ogni volta che un baloon invia un pacchetto
-                    self.total_packets_received += 1
-                    print("ciao2") 
-                    self.get_logger().info("ciao2") 
-    
-    def calculate_avg_results(self):
-        # packets delay average calculation
-        #packets_delay_avg = 
-        # packets loss average calculation
-        packets_loss_avg = (self.total_packets_sent - self.total_packets_received) / self.total_packets_sent if (self.total_packets_sent > 0) else 0
-        # packets distance average calculation
-        packets_distance_avg = sum(self.packet_distances_list) / len(self.packet_distances_list) if self.packet_distances_list else 0
+        if self.base_station_position and sensor_id in self.sensor_positions:
+            sensor_position = self.sensor_positions[sensor_id]
+            for i in range(NUMBER_OF_BALLOONS):
 
-        print(f"Average Packet Loss: {packets_loss_avg:.2f}%")
-        print(f"Average Packet Distance: {packets_distance_avg:.2f}%")
+                #measure the distance from sensor to balloon, then from balloon to base station
+                
+                if i in self.balloon_positions:
+                    balloon_position = self.balloon_positions[i]
+                    distance_sensor_to_balloon = math_utils.point_distance(sensor_position, balloon_position)
+                    if distance_sensor_to_balloon < SENSORS_RANGE:
+                        distance_balloon_to_base = math_utils.point_distance(balloon_position, self.base_station_position)
+                        total_distance = distance_sensor_to_balloon + distance_balloon_to_base
+                        self.packet_distances.append(total_distance)
+
+                        self.balloons_rx[i].publish(msg)
+
+                        
+                        self.total_packets_received += 1
+                        self.total_bytes_transmitted += len(msg.data)  # Assuming 'msg.data' holds the actual payload
+                        break 
+    
+    def metrics_evaluation(self):
+        # Calculate basic metrics
+        packet_loss = (self.total_packets_sent - self.total_packets_received) / self.total_packets_sent if (self.total_packets_sent != 0) else 0
+        average_distance = sum(self.packet_distances) / len(self.packet_distances) if self.packet_distances else 0
+        
+        # New metric: Throughput (bytes per second)
+        elapsed_time = time.time() - self.start_time
+        throughput = self.total_bytes_transmitted / elapsed_time if elapsed_time > 0 else 0
+
+        # Packet success rate
+        packet_success_rate = (self.total_packets_received / self.total_packets_sent) * 100 if self.total_packets_sent != 0 else 0
+        
+        return {
+            'packet_loss': packet_loss,
+            'avg_distance': average_distance,
+            'throughput': throughput,
+            'packet_success_rate': packet_success_rate,
+            'total_data_transferred': self.total_bytes_transmitted,
+            'simulation_time': elapsed_time
+        }
+
 
 def main():
 
@@ -110,8 +147,29 @@ def main():
     # SimulationManager instance is added to the executor. 
     # It let the executor handling parallel simulationManager's callbacks.
     executor.add_node(simulationManager)
-    print("ciao") 
-    self.get_logger().info("ciao") 
+
+    try:
+        executor.spin()
+    finally:
+        metrics = simulationManager.metrics_evaluation()
+
+        # Log metrics to console
+        log_message = (
+            f"Packet Loss: {metrics['packet_loss'] * 100:.2f}%\n"
+            f"Average Distance Traveled by Packets: {metrics['avg_distance']:.2f} units\n"
+            f"Throughput: {metrics['throughput']:.2f} bytes/second\n"
+            f"Packet Success Rate: {metrics['packet_success_rate']:.2f}%\n"
+            f"Total Data Transferred: {metrics['total_data_transferred']} bytes\n"
+            f"Total Simulation Time: {metrics['simulation_time']:.2f} seconds"
+        )
+
+        # Print the log messages in the current terminal
+        print(log_message)
+
+        # Open a new terminal window and display the log messages
+
+    subprocess.Popen(['gnome-terminal', '--', 'bash', '-c', f'echo "{log_message}"; read -p "Press enter to exit..."'])
+
 
     # in order to execute all nodes' callbacks an infinite loop is started 
     # 'till the program is terminated.
@@ -124,3 +182,6 @@ def main():
 
     rclpy.shutdown()
     
+
+if __name__ == '__main__':
+    main()
