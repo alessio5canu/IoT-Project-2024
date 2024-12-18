@@ -67,7 +67,7 @@ class BalloonController(Node):
         
         
 
-        self.get_logger().info(msg.data)
+        self.get_logger().info(msg.content)
 
 
 
