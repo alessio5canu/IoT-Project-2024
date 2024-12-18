@@ -140,50 +140,34 @@ class SimulationManager(Node):
 
 
 def main():
+    rclpy.init()
 
-    rclpy.init() # init ROS 2 system
-
-    simulationManager= SimulationManager()
+    simulation_manager = SimulationManager()
     executor = MultiThreadedExecutor()
-
-    # SimulationManager instance is added to the executor. 
-    # It let the executor handling parallel simulationManager's callbacks.
-    executor.add_node(simulationManager)
+    executor.add_node(simulation_manager)
 
     try:
         executor.spin()
     finally:
-        metrics = simulationManager.metrics_evaluation()
+        packet_loss, avg_distance, avg_delay = simulation_manager.calculate_metrics()
 
-        # Log metrics to console
+        # Log metrics to console and also launch a new terminal window to display them
+        print(f"Packet Loss: {packet_loss * 100:.2f}%")
+        print(f"Average Distance Traveled by Packets: {avg_distance:.2f} units")
+        print(f"Average Packet Delay: {avg_delay:.2f} seconds")
+
+        # Show log messages in a new terminal window
         log_message = (
-            f"Packet Loss: {metrics['packet_loss'] * 100:.2f}%\n"
-            f"Average Distance Traveled by Packets: {metrics['avg_distance']:.2f} units\n"
-            f"Throughput: {metrics['throughput']:.2f} bytes/second\n"
-            f"Packet Success Rate: {metrics['packet_success_rate']:.2f}%\n"
-            f"Total Data Transferred: {metrics['total_data_transferred']} bytes\n"
-            f"Total Simulation Time: {metrics['simulation_time']:.2f} seconds"
+            f"Packet Loss: {packet_loss * 100:.2f}%\n"
+            f"Average Distance Traveled by Packets: {avg_distance:.2f} units\n"
+            f"Average Packet Delay: {avg_delay:.2f} seconds"
         )
+ # Open a new terminal window and display the log messages
+        subprocess.Popen(['xterm', '-e', 'echo "{}"; read -p "Press enter to exit..."'.format(log_message)])
 
-        # Print the log messages in the current terminal
-        print(log_message)
-
-        # Open a new terminal window and display the log messages
-
-    subprocess.Popen(['gnome-terminal', '--', 'bash', '-c', f'echo "{log_message}"; read -p "Press enter to exit..."'])
-
-
-    # in order to execute all nodes' callbacks an infinite loop is started 
-    # 'till the program is terminated.
-    executor.spin()
-
-    simulationManager.calculate_avg_results() # print roba
-
-    executor.shutdown()
-    simulationManager.destroy_node()
-
-    rclpy.shutdown()
-    
+        executor.shutdown()
+        simulation_manager.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
