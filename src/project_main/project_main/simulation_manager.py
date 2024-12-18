@@ -1,5 +1,7 @@
 import sys
 import math
+import time
+import subprocess
 
 import rclpy
 from rclpy.node import Node
@@ -112,7 +114,7 @@ class SimulationManager(Node):
 
                         
                         self.total_packets_received += 1
-                        self.total_bytes_transmitted += len(msg.data)  # Assuming 'msg.data' holds the actual payload
+                        self.total_bytes_transmitted += len(msg.content)  # Assuming 'msg.content' holds the actual payload
                         break 
     
     def metrics_evaluation(self):
