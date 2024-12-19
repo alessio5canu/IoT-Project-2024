@@ -7,7 +7,7 @@ from rclpy.action import ActionServer
 from rclpy.action.server import ServerGoalHandle
 from rclpy.executors import MultiThreadedExecutor
 
-from project_interfaces.msg import SensorInfo
+from project_interfaces.msg import SensorData
 from geometry_msgs.msg import Point, Vector3, Twist
 from nav_msgs.msg import Odometry
 
@@ -49,7 +49,7 @@ class BalloonController(Node):
 
 
         self.rx_data = self.create_subscription(
-            SensorInfo,
+            SensorData,
             'rx_data',
             self.rx_callback,
             10
@@ -63,7 +63,7 @@ class BalloonController(Node):
         )
 
 
-    def rx_callback(self, msg : SensorInfo):
+    def rx_callback(self, msg : SensorData):
         
         
 
