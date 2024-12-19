@@ -132,7 +132,7 @@ def main():
         # Show log messages in a new terminal window
         log_message = (
             f"Packet Loss Rate: {packet_loss * 100:.2f}%\n"
-            f"Packet Success Rate: {packet_success_rate:.2f}%"
+            f"Packet Success Rate: {packet_success_rate:.2f}%\n"
             f"Average Distance Traveled by Packets: {avg_distance:.2f} units\n"
             f"Total Simulation Time: {elapsed_time:.2f} seconds\n"
             f"Total Packets Sent: {total_packets_sent}\n"
