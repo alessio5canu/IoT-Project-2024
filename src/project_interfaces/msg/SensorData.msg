@@ -1,3 +1,3 @@
 string sensorid
-string content
+string data
 float64 timestamp
